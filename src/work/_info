@@ -8,24 +8,117 @@ z2
 !i10f 100
 cModel Technology
 Z0 d/home/gokulgopalakrishnan/Desktop/verilog/project_apb/src
-vapb_slave
-!s110 1780392281
+T_opt
+!s110 1780547193
+V0S7aXgiV3CZa]AJ6d[;_l3
+04 6 4 work apb_tb fast 0
+=1-6805caf5892e-6a20fe79-1a6a7-1ddd9
+o-quiet -auto_acc_if_foreign -work work
+Z1 tCvgOpt 0
+n@_opt
+OE;O;10.6c;65
+vapb_master
+Z2 !s110 1780547186
 !i10b 1
-!s100 6imCMM[mgdGNmBDV7^h7[3
-ImH_hINLmVO_6a:J>dJ@DC3
-VDg1SIo80bB@j0V0VzS_@n1
+!s100 ln;PVSOO_^NBo3[9=gj>C3
+I30T@JdR<?DoDmz?A3TL122
+Z3 VDg1SIo80bB@j0V0VzS_@n1
 R0
-w1780392280
-8apb_slave.v
-Fapb_slave.v
-L0 1
-OE;L;10.6c;65
+Z4 w1780547138
+Z5 8apb_tb.v
+Z6 Fapb_tb.v
+L0 109
+Z7 OE;L;10.6c;65
 r1
 !s85 0
 31
-!s108 1780392281.000000
-!s107 apb_slave.v|
-!s90 apb_slave.v|
+Z8 !s108 1780547186.000000
+Z9 !s107 apb_tb.v|
+Z10 !s90 apb_tb.v|
 !i113 0
-o-L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
-tCvgOpt 0
+Z11 o-L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R1
+vapb_slave
+R2
+!i10b 1
+!s100 H2Ok<3kQamP:^Yn]:dnFf0
+Iz8F6o?G;FNlol@R_Nk]L33
+R3
+R0
+R4
+R5
+R6
+L0 59
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R1
+vapb_slave2
+R2
+!i10b 1
+!s100 A9TShg1mo[RPE8ET8=]`P1
+I0@HlMJ_Hl6L]IkOG7cBHR2
+R3
+R0
+R4
+R5
+R6
+L0 7
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R1
+vapb_tb
+R2
+!i10b 1
+!s100 [l>k`>DYXi]QoX7Rzzj850
+IROk=Iz_g:3`L2YP@HJVgJ2
+R3
+R0
+R4
+R5
+R6
+L0 230
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R1
+vapb_top
+R2
+!i10b 1
+!s100 V2;KVlOMh?Q_Q;T2b[18^2
+I3O?fSC:KI?H9Zhe3;E44I3
+R3
+R0
+R4
+R5
+R6
+L0 175
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R1

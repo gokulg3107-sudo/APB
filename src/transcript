@@ -1,0 +1,87 @@
+# vsim -c apb_tb 
+# Start time: 09:56:32 on Jun 04,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# //  Questa Sim
+# //  Version 10.6c linux Jul 25 2017
+# //
+# //  Copyright 1991-2017 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading work.apb_tb(fast)
+# 
+# ============================================================
+#   APB Self-Checking Testbench
+#   Slave1(u_slave1) = apb_slave2, PSEL=1, addr[8]=1, 4-state
+#   Slave2(u_slave2) = apb_slave,  PSEL=0, addr[8]=0, 3-state
+# ============================================================
+# 
+# --- GROUP 1: Slave2 ROM reads (addr[8]=0) ---
+#   [PASS] # 1  addr=0x000  exp=0x00  got=0x00
+#   [PASS] # 2  addr=0x001  exp=0x01  got=0x01
+#   [PASS] # 3  addr=0x007  exp=0x07  got=0x07
+#   [PASS] # 4  addr=0x055  exp=0x55  got=0x55
+#   [PASS] # 5  addr=0x0aa  exp=0xaa  got=0xaa
+#   [PASS] # 6  addr=0x0fe  exp=0xfe  got=0xfe
+# 
+# --- GROUP 2: Slave1 ROM reads (addr[8]=1) ---
+#   [PASS] # 7  addr=0x100  exp=0x00  got=0x00
+#   [PASS] # 8  addr=0x101  exp=0x01  got=0x01
+#   [PASS] # 9  addr=0x155  exp=0x55  got=0x55
+#   [PASS] #10  addr=0x1aa  exp=0xaa  got=0xaa
+#   [PASS] #11  addr=0x1fe  exp=0xfe  got=0xfe
+# 
+# --- GROUP 3: Write->Read Slave2 (addr[8]=0) ---
+#   [PASS] #12  addr=0x010  exp=0xbe  got=0xbe
+#   [PASS] #13  addr=0x020  exp=0xef  got=0xef
+#   [PASS] #14  addr=0x000  exp=0xff  got=0xff
+#   [PASS] #15  addr=0x0fe  exp=0x01  got=0x01
+# 
+# --- GROUP 4: Write->Read Slave1 (addr[8]=1) ---
+#   [PASS] #16  addr=0x110  exp=0xde  got=0xde
+#   [PASS] #17  addr=0x120  exp=0xad  got=0xad
+#   [PASS] #18  addr=0x100  exp=0x5a  got=0x5a
+#   [PASS] #19  addr=0x1fe  exp=0xa5  got=0xa5
+# 
+# --- GROUP 5: Corner Cases ---
+#   [PASS] #20  addr=0x030  exp=0x22  got=0x22
+#   [PASS] #21  addr=0x040  exp=0x00  got=0x00
+#   [PASS] #22  addr=0x041  exp=0xff  got=0xff
+#   [PASS] #23  addr=0x050  exp=0xcc  got=0xcc
+#   [PASS] #24  addr=0x051  exp=0xcc  got=0xcc
+#   [PASS] #25  addr=0x060  exp=0xab  got=0xab
+#   [PASS] #26  addr=0x160  exp=0xcd  got=0xcd
+#   [PASS] #27  addr=0x070  exp=0x99  got=0x99
+#   [PASS] #28  addr=0x001  exp=0x12  got=0x12
+#   [PASS] #29  addr=0x101  exp=0x34  got=0x34
+#   [PASS] #30  addr=0x0ff  exp=0xc3  got=0xc3
+#   [PASS] #31  addr=0x1ff  exp=0x3c  got=0x3c
+#   [PASS] #32  addr=0x080  exp=0xa1  got=0xa1
+#   [PASS] #33  addr=0x180  exp=0xb2  got=0xb2
+#   [PASS] #34  addr=0x081  exp=0xa3  got=0xa3
+#   [PASS] #35  addr=0x181  exp=0xb4  got=0xb4
+#   [PASS] #36  addr=0x090  exp=0x22  got=0x22
+#   [PASS] #37  addr=0x0a0  exp=0x01  got=0x01
+#   [PASS] #38  addr=0x0a1  exp=0x02  got=0x02
+#   [PASS] #39  addr=0x0a2  exp=0x04  got=0x04
+#   [PASS] #40  addr=0x0a3  exp=0x08  got=0x08
+#   [PASS] #41  addr=0x0a4  exp=0x10  got=0x10
+#   [PASS] #42  addr=0x0a5  exp=0x20  got=0x20
+#   [PASS] #43  addr=0x0a6  exp=0x40  got=0x40
+#   [PASS] #44  addr=0x0a7  exp=0x80  got=0x80
+# 
+# ============================================================
+#   RESULTS:  44 PASSED  |  0 FAILED  |  44 TOTAL
+# ============================================================
+# 
+# ** Note: $finish    : apb_tb.v(431)
+#    Time: 7555 ns  Iteration: 1  Instance: /apb_tb
+# End time: 09:56:34 on Jun 04,2026, Elapsed time: 0:00:02
+# Errors: 0, Warnings: 0
