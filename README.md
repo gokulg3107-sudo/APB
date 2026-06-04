@@ -373,10 +373,3 @@ RESULTS: XX PASSED | 0 FAILED | XX TOTAL
 
 ---
 
-## Author
-
-**Gokul G**  
-B.E. Electronics and Communication Engineering  
-IEEE Signal Processing Club Secretary
-
-**Project:** APB Master-Slave Communication Protocol using Verilog HDL
