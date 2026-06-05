@@ -34,7 +34,7 @@ always@(*)begin
 end
 
 assign SLV_PREADY = current_state == ready ? 1'b1 : 1'b0;
-assign SLV_PRDATA = current_state == access ? PWRITE ? 0 : memory[PADDR] : 0;
+assign SLV_PRDATA = current_state != idle ? PWRITE ? 0 : memory[PADDR] : 0;
 always@(current_state)begin
     if(current_state == access && PWRITE) memory[PADDR] = PWDATA;
 end
