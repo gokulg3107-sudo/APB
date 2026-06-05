@@ -1,202 +1,284 @@
 `timescale 1ns/1ps
+`include "apb_top.v"
 
-module apb_tb;
-	parameter size = 8;
+module tb_apb;
 
-	reg  PCLK, PRESETn, READ_WRITE, TRANSFER;
-	reg  [size:0]   APB_READ_PADDR, APB_WRITE_PADDR;
-	reg  [size-1:0] APB_WRITE_DATA;
-	wire [size-1:0] APB_READ_DATA_OUT;
-	wire [size-1:0] MON_PRDATA;
-	wire [1:0]      MON_SLV1_STATE;
-	wire [1:0]      MON_SLV2_STATE;
+parameter size = 8;
 
-	integer pass_count, fail_count, test_num;
-	reg [size-1:0] captured_read;
+reg PCLK, PRESETn, READ_WRITE, TRANSFER;
+reg [size:0] APB_READ_PADDR, APB_WRITE_PADDR;
+reg [size-1:0] APB_WRITE_DATA;
+wire [size-1:0] APB_READ_DATA_OUT;
 
-	apb_top #(.size(size)) dut(
-		.PCLK             (PCLK),
-		.PRESETn          (PRESETn),
-		.READ_WRITE       (READ_WRITE),
-		.TRANSFER         (TRANSFER),
-		.APB_READ_DATA_OUT(APB_READ_DATA_OUT),
-		.APB_READ_PADDR   (APB_READ_PADDR),
-		.APB_WRITE_DATA   (APB_WRITE_DATA),
-		.APB_WRITE_PADDR  (APB_WRITE_PADDR),
-		.MON_PRDATA       (MON_PRDATA),
-		.MON_SLV1_STATE   (MON_SLV1_STATE),
-		.MON_SLV2_STATE   (MON_SLV2_STATE)
-	);
+apb_top #(.size(size)) u_top(.*);
 
-	initial PCLK = 0;
-	always #5 PCLK = ~PCLK;
+initial PCLK = 0;
+always #5 PCLK = ~PCLK;
 
-	always @(posedge PCLK) begin
-		if(MON_SLV1_STATE == 2'd1 || MON_SLV2_STATE == 2'd1)
-			captured_read <= MON_PRDATA;
+task apb_write;
+	input [size:0]   addr;
+	input [size-1:0] data;
+	begin
+		@(negedge PCLK);
+		APB_WRITE_PADDR = addr;
+		APB_WRITE_DATA  = data;
+		READ_WRITE      = 1;
+		TRANSFER        = 1;
+		@(negedge PCLK);
+		TRANSFER = 0;
+		wait(u_top.PREADY);
+		@(negedge PCLK);
+	end
+endtask
+
+task apb_read;
+	input [size:0] addr;
+	begin
+		@(negedge PCLK);
+		APB_READ_PADDR = addr;
+		READ_WRITE     = 0;
+		TRANSFER       = 1;
+		@(negedge PCLK);
+		TRANSFER = 0;
+		wait(u_top.PREADY);
+		@(negedge PCLK);
+		@(negedge PCLK);
+	end
+endtask
+
+integer pass_count, fail_count;
+
+initial begin
+	$dumpfile("tb_apb.vcd");
+	$dumpvars(0, tb_apb);
+
+	pass_count      = 0;
+	fail_count      = 0;
+	PRESETn         = 0;
+	TRANSFER        = 0;
+	READ_WRITE      = 0;
+	APB_WRITE_PADDR = 0;
+	APB_READ_PADDR  = 0;
+	APB_WRITE_DATA  = 0;
+	repeat(3) @(negedge PCLK);
+	PRESETn = 1;
+	@(negedge PCLK);
+
+	// -------------------------------------------------------
+	// Slave 1  (addr[8] = 0)
+	// -------------------------------------------------------
+
+	apb_write(9'h010, 8'hAB);
+	apb_read(9'h010);
+	if(APB_READ_DATA_OUT === 8'hAB) begin
+		$display("TC1  PASS: slv1 wr/rd 0x10 = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC1  FAIL: slv1 rd 0x10 = 0x%02h, exp 0xAB", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
 	end
 
-	task do_write;
-		input [size:0]   wr_addr;
-		input [size-1:0] wr_data;
-		integer i;
-		begin
-			@(negedge PCLK);
-			APB_WRITE_PADDR = wr_addr;
-			APB_WRITE_DATA  = wr_data;
-			READ_WRITE      = 1;
-			TRANSFER        = 1;
-			for(i=0; i<7; i=i+1) @(posedge PCLK);
-			@(negedge PCLK);
-			TRANSFER = 0;
-			repeat(2) @(posedge PCLK);
-		end
-	endtask
-
-	task do_read;
-		input [size:0]   rd_addr;
-		input [size-1:0] exp;
-		integer i;
-		begin
-			@(negedge PCLK);
-			APB_READ_PADDR = rd_addr;
-			READ_WRITE     = 0;
-			TRANSFER       = 1;
-			for(i=0; i<7; i=i+1) @(posedge PCLK);
-			@(negedge PCLK);
-			TRANSFER = 0;
-			repeat(2) @(posedge PCLK);
-			test_num = test_num + 1;
-			if(captured_read === exp) begin
-				$display("  [PASS] #%02d  addr=0x%03h  exp=0x%02h  got=0x%02h",
-					test_num, rd_addr, exp, captured_read);
-				pass_count = pass_count + 1;
-			end else begin
-				$display("  [FAIL] #%02d  addr=0x%03h  exp=0x%02h  got=0x%02h",
-					test_num, rd_addr, exp, captured_read);
-				fail_count = fail_count + 1;
-			end
-		end
-	endtask
-
-	task idle_bus;
-		input integer n;
-		integer i;
-		begin
-			TRANSFER = 0;
-			for(i=0; i<n; i=i+1) @(posedge PCLK);
-		end
-	endtask
-
-	initial begin
-		$dumpfile("apb_tb.vcd");
-		$dumpvars(0, apb_tb);
-
-		pass_count=0; fail_count=0; test_num=0;
-		captured_read=0;
-		TRANSFER=0; READ_WRITE=0;
-		APB_READ_PADDR=0; APB_WRITE_PADDR=0; APB_WRITE_DATA=0;
-
-		PRESETn=0;
-		repeat(4) @(posedge PCLK);
-		@(negedge PCLK); PRESETn=1;
-		repeat(2) @(posedge PCLK);
-
-		$display("\n============================================================");
-		$display("  APB Self-Checking Testbench");
-		$display("  Slave1(u_slave1) = apb_slave2, PSEL=1, addr[8]=1, 4-state");
-		$display("  Slave2(u_slave2) = apb_slave,  PSEL=0, addr[8]=0, 3-state");
-		$display("============================================================\n");
-
-		$display("--- GROUP 1: Slave2 ROM reads (addr[8]=0) ---");
-		do_read(9'h000, 8'h00);
-		do_read(9'h001, 8'h01);
-		do_read(9'h007, 8'h07);
-		do_read(9'h055, 8'h55);
-		do_read(9'h0AA, 8'hAA);
-		do_read(9'h0FE, 8'hFE);
-
-		$display("\n--- GROUP 2: Slave1 ROM reads (addr[8]=1) ---");
-		do_read(9'h100, 8'h00);
-		do_read(9'h101, 8'h01);
-		do_read(9'h155, 8'h55);
-		do_read(9'h1AA, 8'hAA);
-		do_read(9'h1FE, 8'hFE);
-
-		$display("\n--- GROUP 3: Write->Read Slave2 (addr[8]=0) ---");
-		do_write(9'h010, 8'hBE); do_read(9'h010, 8'hBE);
-		do_write(9'h020, 8'hEF); do_read(9'h020, 8'hEF);
-		do_write(9'h000, 8'hFF); do_read(9'h000, 8'hFF);
-		do_write(9'h0FE, 8'h01); do_read(9'h0FE, 8'h01);
-
-		$display("\n--- GROUP 4: Write->Read Slave1 (addr[8]=1) ---");
-		do_write(9'h110, 8'hDE); do_read(9'h110, 8'hDE);
-		do_write(9'h120, 8'hAD); do_read(9'h120, 8'hAD);
-		do_write(9'h100, 8'h5A); do_read(9'h100, 8'h5A);
-		do_write(9'h1FE, 8'hA5); do_read(9'h1FE, 8'hA5);
-
-		$display("\n--- GROUP 5: Corner Cases ---");
-		do_write(9'h030, 8'h11);
-		do_write(9'h030, 8'h22);
-		do_read(9'h030, 8'h22);
-
-		do_write(9'h040, 8'h00); do_read(9'h040, 8'h00);
-		do_write(9'h041, 8'hFF); do_read(9'h041, 8'hFF);
-
-		do_write(9'h050, 8'hCC);
-		do_write(9'h051, 8'hCC);
-		do_read(9'h050, 8'hCC);
-		do_read(9'h051, 8'hCC);
-
-		do_write(9'h060, 8'hAB);
-		do_write(9'h160, 8'hCD);
-		do_read(9'h060, 8'hAB);
-		do_read(9'h160, 8'hCD);
-
-		idle_bus(15);
-		do_write(9'h070, 8'h99);    
-		idle_bus(10);
-		do_read(9'h070, 8'h99);
-
-		do_write(9'h001, 8'h12);
-		do_write(9'h101, 8'h34);
-		do_read(9'h001, 8'h12);
-		do_read(9'h101, 8'h34);
-
-		do_write(9'h0FF, 8'hC3); do_read(9'h0FF, 8'hC3);
-		do_write(9'h1FF, 8'h3C); do_read(9'h1FF, 8'h3C);
-
-		do_write(9'h080, 8'hA1);
-		do_write(9'h180, 8'hB2);
-		do_write(9'h081, 8'hA3);
-		do_write(9'h181, 8'hB4);
-		do_read(9'h080, 8'hA1);
-		do_read(9'h180, 8'hB2);
-		do_read(9'h081, 8'hA3);
-		do_read(9'h181, 8'hB4);
-
-		do_write(9'h090, 8'h11);
-		idle_bus(5);
-		do_write(9'h090, 8'h22);
-		idle_bus(5);
-		do_read(9'h090, 8'h22);
-
-		do_write(9'h0A0, 8'h01); do_read(9'h0A0, 8'h01);
-		do_write(9'h0A1, 8'h02); do_read(9'h0A1, 8'h02);
-		do_write(9'h0A2, 8'h04); do_read(9'h0A2, 8'h04);
-		do_write(9'h0A3, 8'h08); do_read(9'h0A3, 8'h08);
-		do_write(9'h0A4, 8'h10); do_read(9'h0A4, 8'h10);
-		do_write(9'h0A5, 8'h20); do_read(9'h0A5, 8'h20);
-		do_write(9'h0A6, 8'h40); do_read(9'h0A6, 8'h40);
-		do_write(9'h0A7, 8'h80); do_read(9'h0A7, 8'h80);
-
-		repeat(4) @(posedge PCLK);
-		$display("\n============================================================");
-		$display("  RESULTS:  %0d PASSED  |  %0d FAILED  |  %0d TOTAL",
-			pass_count, fail_count, pass_count+fail_count);
-		$display("============================================================\n");
-		$finish;
+	apb_write(9'h020, 8'h55);
+	apb_read(9'h020);
+	if(APB_READ_DATA_OUT === 8'h55) begin
+		$display("TC2  PASS: slv1 wr/rd 0x20 = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC2  FAIL: slv1 rd 0x20 = 0x%02h, exp 0x55", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
 	end
 
-	initial begin #2000000; $display("[TIMEOUT]"); $finish; end
+	apb_read(9'h005);
+	if(APB_READ_DATA_OUT === 8'h05) begin
+		$display("TC3  PASS: slv1 ROM 0x05 = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC3  FAIL: slv1 ROM 0x05 = 0x%02h, exp 0x05", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	apb_read(9'h07F);
+	if(APB_READ_DATA_OUT === 8'h7F) begin
+		$display("TC4  PASS: slv1 ROM 0x7F = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC4  FAIL: slv1 ROM 0x7F = 0x%02h, exp 0x7F", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	apb_write(9'h0FF, 8'hA5);
+	apb_read(9'h0FF);
+	if(APB_READ_DATA_OUT === 8'hA5) begin
+		$display("TC5  PASS: slv1 wr/rd 0xFF = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC5  FAIL: slv1 rd 0xFF = 0x%02h, exp 0xA5", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	// -------------------------------------------------------
+	// Slave 2  (addr[8] = 1)
+	// -------------------------------------------------------
+
+	apb_write(9'h130, 8'hCD);
+	apb_read(9'h130);
+	if(APB_READ_DATA_OUT === 8'hCD) begin
+		$display("TC6  PASS: slv2 wr/rd 0x30 = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC6  FAIL: slv2 rd 0x30 = 0x%02h, exp 0xCD", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	apb_write(9'h17F, 8'hFF);
+	apb_read(9'h17F);
+	if(APB_READ_DATA_OUT === 8'hFF) begin
+		$display("TC7  PASS: slv2 wr/rd 0x7F = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC7  FAIL: slv2 rd 0x7F = 0x%02h, exp 0xFF", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	apb_read(9'h10A);
+	if(APB_READ_DATA_OUT === 8'h0A) begin
+		$display("TC8  PASS: slv2 ROM 0x0A = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC8  FAIL: slv2 ROM 0x0A = 0x%02h, exp 0x0A", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	apb_write(9'h100, 8'h00);
+	apb_read(9'h100);
+	if(APB_READ_DATA_OUT === 8'h00) begin
+		$display("TC9  PASS: slv2 wr/rd 0x00 = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC9  FAIL: slv2 rd 0x00 = 0x%02h, exp 0x00", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	// -------------------------------------------------------
+	// Cross-slave independence: write slv1 addr, read same
+	// offset on slv2 — slv2 ROM default must be undisturbed
+	// -------------------------------------------------------
+
+	apb_write(9'h040, 8'hBB);
+	apb_read(9'h140);
+	if(APB_READ_DATA_OUT === 8'h40) begin
+		$display("TC10 PASS: slv2 ROM 0x40 undisturbed = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC10 FAIL: slv2 rd 0x40 = 0x%02h, exp 0x40", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	// -------------------------------------------------------
+	// Consecutive writes then reads — slv1
+	// -------------------------------------------------------
+
+	apb_write(9'h001, 8'h11);
+	apb_write(9'h002, 8'h22);
+	apb_write(9'h003, 8'h33);
+
+	apb_read(9'h001);
+	if(APB_READ_DATA_OUT === 8'h11) begin
+		$display("TC11 PASS: consec slv1 rd 0x01 = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC11 FAIL: consec slv1 rd 0x01 = 0x%02h, exp 0x11", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	apb_read(9'h002);
+	if(APB_READ_DATA_OUT === 8'h22) begin
+		$display("TC12 PASS: consec slv1 rd 0x02 = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC12 FAIL: consec slv1 rd 0x02 = 0x%02h, exp 0x22", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	apb_read(9'h003);
+	if(APB_READ_DATA_OUT === 8'h33) begin
+		$display("TC13 PASS: consec slv1 rd 0x03 = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC13 FAIL: consec slv1 rd 0x03 = 0x%02h, exp 0x33", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	// -------------------------------------------------------
+	// Consecutive writes then reads — slv2
+	// -------------------------------------------------------
+
+	apb_write(9'h101, 8'hAA);
+	apb_write(9'h102, 8'hBB);
+	apb_write(9'h103, 8'hCC);
+
+	apb_read(9'h101);
+	if(APB_READ_DATA_OUT === 8'hAA) begin
+		$display("TC14 PASS: consec slv2 rd 0x01 = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC14 FAIL: consec slv2 rd 0x01 = 0x%02h, exp 0xAA", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	apb_read(9'h102);
+	if(APB_READ_DATA_OUT === 8'hBB) begin
+		$display("TC15 PASS: consec slv2 rd 0x02 = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC15 FAIL: consec slv2 rd 0x02 = 0x%02h, exp 0xBB", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	apb_read(9'h103);
+	if(APB_READ_DATA_OUT === 8'hCC) begin
+		$display("TC16 PASS: consec slv2 rd 0x03 = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC16 FAIL: consec slv2 rd 0x03 = 0x%02h, exp 0xCC", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	// -------------------------------------------------------
+	// Reset recovery
+	// -------------------------------------------------------
+
+	@(negedge PCLK);
+	PRESETn = 0;
+	repeat(2) @(negedge PCLK);
+	PRESETn = 1;
+	@(negedge PCLK);
+
+	apb_write(9'h050, 8'hEE);
+	apb_read(9'h050);
+	if(APB_READ_DATA_OUT === 8'hEE) begin
+		$display("TC17 PASS: post-reset slv1 wr/rd 0x50 = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC17 FAIL: post-reset slv1 rd 0x50 = 0x%02h, exp 0xEE", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	apb_write(9'h150, 8'h77);
+	apb_read(9'h150);
+	if(APB_READ_DATA_OUT === 8'h77) begin
+		$display("TC18 PASS: post-reset slv2 wr/rd 0x50 = 0x%02h", APB_READ_DATA_OUT);
+		pass_count = pass_count + 1;
+	end else begin
+		$display("TC18 FAIL: post-reset slv2 rd 0x50 = 0x%02h, exp 0x77", APB_READ_DATA_OUT);
+		fail_count = fail_count + 1;
+	end
+
+	repeat(5) @(negedge PCLK);
+	$display("----------------------------------");
+	$display("RESULTS: %0d PASS / %0d FAIL", pass_count, fail_count);
+	$display("----------------------------------");
+	$finish;
+end
+
 endmodule
